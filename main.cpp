@@ -13,16 +13,16 @@ using namespace std;
 ///----------------------------------------------------------------------------------------------------------------------------------
 const bool plot_vtk = true;
 const int n_phase = 2;
-const int nx = 100, ny = 4*nx, np = 9;
-const double NX = (double)nx, gravity = 0.04*0.04/NX, rho0_b = 1., At = 0.5, rho0_r = -rho0_b*(At+1)/(At-1), Reynolds = 3000000., nu = sqrt(NX*gravity)*NX/Reynolds;
-const double cs2 = 1./3., beta = 0.7, alpha_b = 1./3., alpha_r = 1.-(1.-alpha_b)*rho0_b/rho0_r;
+const int nx = 1000, ny = 2*nx, np = 9;
+const double NX = (double)nx-1, gravity = 0.05*0.05/NX, rho0_b = 1., At = 0.9, rho0_r = -rho0_b*(At+1)/(At-1), Reynolds = 30000., nu = sqrt(NX*gravity)*NX/Reynolds, T = sqrt(NX/gravity/At);
+const double cs2 = 1./3., beta = 0.7, alpha_b = 4./9., alpha_r = 1.-(1.-alpha_b)*rho0_b/rho0_r;
 vector<const int> cx = {0, 1, 0, -1, 0, 1, -1, -1, 1},
 									cy = {0, 0, 1, 0, -1, 1, 1, -1, -1},
 									opp= {0, 3, 4, 1, 2, 7, 8, 5, 6};
 vector<const double> wf = {4./9., 1./9., 1./9., 1./9., 1./9., 1./36., 1./36., 1./36., 1./36.};
 vector<const double> B = {-4/27., 2/27., 2/27., 2/27., 2/27., 5/108., 5/108., 5/108., 5/108.};
-vector<const double> alphaK = {alpha_r, alpha_b}, ni = {nu, nu};
-const int nsteps = (int)(20*sqrt(NX/gravity))+1, n_out = (int)(1*sqrt(NX/gravity))/20;
+vector<const double> alphaK = {alpha_b, alpha_r}, ni = {nu, nu};
+const int nsteps = (int)(10*T+1), n_out = (int)(T/20);
 vector<double> f(nx*ny*np,0.), f_old(nx*ny*np,0.), rhoK(nx*ny*n_phase,0.), rhoK_old(nx*ny*n_phase,0.), rho(nx*ny,0.), u(nx*ny,0.), v(nx*ny,0.);
 vector<double> gradx_rhoK(nx*ny*n_phase,0.), grady_rhoK(nx*ny*n_phase,0.);
 //double gradx_rho[nx][ny][nz], grady_rho[nx][ny][nz], gradz_rho[nx][ny][nz];
@@ -78,7 +78,7 @@ void write_fluid_vtk(int time)
 		for(int X = 0; X < nx; ++X)
     {
       id = X*ny+Y;
-      output_file << (rhoK[id*n_phase+0]-rhoK[id*n_phase+1])/(rhoK[id*n_phase+0]+rhoK[id*n_phase+1]) << "\n";
+      output_file << (rhoK[id*n_phase+1]-rhoK[id*n_phase+0])/(rhoK[id*n_phase+0]+rhoK[id*n_phase+1]) << "\n";
     }
 
 	output_file << "VECTORS velocity_vector float\n";
@@ -95,6 +95,8 @@ void write_fluid_vtk(int time)
 void initial_state()
 {
 	double phi, X;
+	int max = 1, min = -1;
+	double h, an, bn;
 	for(int x=0; x<nx; x++)
     for(int y=0; y<ny; y++)
 		{
@@ -102,15 +104,23 @@ void initial_state()
 			U = u[id] = 0.;
       V = v[id] = 0.;
       X = (double)x / ((double)nx-1);
-      if(y>2*nx+0.05*nx*(cos(2*M_PI*X)))
+			h = 0;
+			for(int n=30; n<40; n++)
+			{
+				an = rand()%(max-min + 1) + min;
+				bn = rand()%(max-min + 1) + min;
+				h += an*cos(2.*M_PI*n*X)+bn*sin(2.*M_PI*n*X);
+			}
+			h = 0.5*ny+nx*0.002*h;
+      if(y>h)
       {
-	      rhoK[id*n_phase+0] = rho0_r;
-        rhoK[id*n_phase+1] = 0.;
+	      rhoK[id*n_phase+0] = 0.;
+        rhoK[id*n_phase+1] = rho0_r;
 	    }
   	  else
   	  {
-  	    rhoK[id*n_phase+0] = 0.;
-  	    rhoK[id*n_phase+1] = rho0_b;
+  	    rhoK[id*n_phase+0] = rho0_b;
+  	    rhoK[id*n_phase+1] = 0.;
   	  }
 			rho[id] = 0.;
 			for(int k=0; k<n_phase; k++)
@@ -157,7 +167,7 @@ void compute_gradient_rho(int x, int y)
 			  gradx_rhoK[id*n_phase+k] += 3.*wf[n]*cx[n]*value;
 			  grady_rhoK[id*n_phase+k] += 3.*wf[n]*cy[n]*value;
 			}
-		else if(y==0) // SOUTH wall
+		if(y==0) // SOUTH wall
 		{
       id1 = ((x+1+nx)%nx)*ny+y;
       id2 = ((x-1+nx)%nx)*ny+y;
@@ -171,7 +181,7 @@ void compute_gradient_rho(int x, int y)
 			id2 = x*ny+(y+2);
 			grady_rhoK[id*n_phase+k] = -3./2*rhoK[id*n_phase+k]/rho[id] + 2.*rhoK[id1*n_phase+k]/rho[id1] - 1./2.*rhoK[id2*n_phase+k]/rho[id2];
 		}
-		else if(y==ny-1) // NORTH wall
+		if(y==ny-1) // NORTH wall
 		{
       id1 = ((x+1+nx)%nx)*ny+y;
       id2 = ((x-1+nx)%nx)*ny+y;
@@ -193,7 +203,7 @@ void perturbation(int x, int y, double omega)
   id = x*ny+y;
   for(int k=0; k<n_phase; k++)
   {
-		double surfaceTension = 0.0;
+		double surfaceTension = 1E-5;
     double A_ = 9*surfaceTension*omega*0.25;
     double R1 = 1./rho[id];
     for(int l=0; l<n_phase; l++)
@@ -221,17 +231,12 @@ void recoloring_and_streaming()
 	int newx, newy;
 	f_old = f;
   rhoK_old = rhoK;
-  std::fill(f.begin(), f.end(), 0);
+  std::fill(f.begin(), f.end(), 0.);
   totalMass = 0.;
   double R;
 	for(int k=0; k<n_phase; k++)
   {
-  	for(int x=0; x<nx; x++)
-			for(int y=0; y<ny; y++)
-      {
-        id = x*ny+y;
-  	   	kTotalMass[id] = 0.;
-      }
+		std::fill(kTotalMass.begin(), kTotalMass.end(), 0);
     for(int n=0; n<np; n++)
     {
       for(int x=0; x<nx; x++)
@@ -315,9 +320,9 @@ int algorithm_CMS()
 	      U += ftemp*cx[n];
 	      V += ftemp*cy[n];
 	    }
-	    if(y == 0 || y == ny-1)
-	    	FY = 0.;
-	    else
+	    // if(y == 0 || y == ny-1)
+	    // 	FY = 0.;
+	    // else
 		    FY = -(R - 0.5*(rho0_r+rho0_b))*gravity;
 	    U /= R;
 	    V = (V + 0.5*FY)/R;
@@ -365,8 +370,8 @@ int algorithm_CMS()
 				k5 += ftemp*CX*CY;
 			}
       FY = -(R - 0.5*(rho0_r+rho0_b))*gravity;
-			if(y==0 || y==ny-1)
-				FY = 0.;
+			// if(y==0 || y==ny-1)
+			// 	FY = 0.;
       k1 = FX/2.;
       k2 = FY/2.;
       k3 = -(6*R*(alpha - 1.))/5.;
@@ -412,12 +417,12 @@ void boundary()
       if(cy[n]>0)
 			{
   			id = i*ny+0;
-  			f[id*np+n] = f[id*np+opp[n]];
+  			f[id*np+n] = f_old[id*np+opp[n]];
   		}
   		if(cy[n]<0)
   		{
   			id = i*ny+ny-1;
-  			f[id*np+n] = f[id*np+opp[n]];
+  			f[id*np+n] = f_old[id*np+opp[n]];
   		}
 		}
 }
@@ -429,6 +434,7 @@ int main(int argc, char *argv[])
 	system("mkdir vtk_fluid");
 	initial_state();
 	int check_mach = 0;
+	printf("%lf %lf\n", rho0_b , rho0_r);
 	for(int i=0; i<nsteps; i++)
   {
     check_mach = algorithm_CMS();
