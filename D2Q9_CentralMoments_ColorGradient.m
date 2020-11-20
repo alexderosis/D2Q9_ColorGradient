@@ -20,7 +20,8 @@
 clear all
 clc
 
-syms U V R omega f0 f1 f2 f3 f4 f5 f6 f7 f8 Fx Fy abar real
+syms U V R omega f0 f1 f2 f3 f4 f5 f6 f7 f8 Fx Fy abar...
+     nu gradxR gradyR real
 %% Define lattice directions, weights and other useful quantities of the D2Q9 model
 cx = [0 1 0 -1 0 1 -1 -1 1];
 cy = [0 0 1 0 -1 1 1 -1 -1];
@@ -43,18 +44,30 @@ Id = eye(9,9); % identity matrix
 
 phi = sym(zeros(9,1));
 varphi = sym(zeros(9,1));
+psi = sym(zeros(9,1));
+xi = sym(zeros(9,1));
+correction = sym(zeros(9,1));
 for i=1:length(cx)
     if(i==1)
         phi(i) = 0;
         varphi(i) = 1;
+        psi(i) = -8/3;
+        xi(i) = 0;
     elseif(i>1 && i<=5)
         phi(i) = 1/5;
         varphi(i) = -1/5;
+        psi(i) = -1/6;
+        xi(i) = 1/2;
     else
         phi(i) = 1/20;
         varphi(i) = -1/20;
+        psi(i) = 1/12;
+        xi(i) = 1/8;
     end
 end
+u = [U V];
+gradR = [gradxR gradyR];
+G = u'*gradR+(u'*gradR)';
 for i=1:length(cx)
     % build the complete equilibria
     first_order = 1/cs2*(U*cx(i)+V*cy(i));
@@ -65,6 +78,9 @@ for i=1:length(cx)
     fourth_order = 1/(4*cs8)*((cx(i)^2-1/3)*(cy(i)^2-1/3)*U*U*V*V);
     feq(i) = R*(phi(i)+varphi(i)*abar+w(i)*(first_order+second_order+third_order+fourth_order));
     
+    ci = [cx(i) cy(i)];
+    correction(i) = nu*( psi(i)*dot(u,gradR) + xi(i)*sum(sum(G*(ci'*ci))) );
+    %feq(i) = feq(i) + correction(i);
     % build the complete forcing terms
     hat_cx = cx(i)/cs;
     hat_cy = cy(i)/cs;
