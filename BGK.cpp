@@ -13,8 +13,8 @@ using namespace std;
 ///----------------------------------------------------------------------------------------------------------------------------------
 const bool plot_vtk = true;
 const int n_phase = 2;
-const int nx = 100, ny = 2*nx, np = 9;
-const double NX = (double)nx-1, gravity = 0.05*0.05/NX, rho0_b = 1., At = 0.9, rho0_r = -rho0_b*(At+1)/(At-1), Reynolds = 30000., nu = sqrt(NX*gravity)*NX/Reynolds, T = sqrt(NX/gravity/At);
+const int nx = 200, ny = 4*nx, np = 9;
+const double NX = (double)nx-1, gravity = 0.05*0.05/NX, rho0_b = 1., At = 0.5, rho0_r = -rho0_b*(At+1)/(At-1), Reynolds = 128., nu = sqrt(NX*gravity)*NX/Reynolds, T = sqrt(NX/gravity/At);
 const double cs2 = 1./3., beta = 0.7, alpha_b = 4./9., alpha_r = 1.-(1.-alpha_b)*rho0_b/rho0_r;
 vector<const int> cx = {0, 1, 0, -1, 0, 1, -1, -1, 1},
 									cy = {0, 0, 1, 0, -1, 1, 1, -1, -1},
@@ -37,6 +37,8 @@ double CX, CY, U2, V2, UV, U3, V3;
 double max_velocity;
 int id, idn;
 double FX, FY;
+const double cs = 1./sqrt(3.), cs3 = cs2*cs, cs4 = cs2*cs2, cs6 = cs4*cs2, cs8 = cs6*cs2;
+double first_order, second_order, third_order, fourth_order, force_contribution, cx_norm, cy_norm, cx2_norm, cy2_norm;
 ///----------------------------------------------------------------------------------------------------------------------------------
 ///----------------------------------------------------------------------------------------------------------------------------------
 void write_fluid_vtk(int time)
@@ -107,11 +109,11 @@ void initial_state()
 			h = 0;
 			for(int n=30; n<40; n++)
 			{
-				an = rand()%(max-min + 1) + min;
-				bn = rand()%(max-min + 1) + min;
+				an = rand()%(max-min+1)+min;
+				bn = rand()%(max-min+1)+min;
 				h += an*cos(2.*M_PI*n*X)+bn*sin(2.*M_PI*n*X);
 			}
-			h = 0.5*ny+nx*0.002*h;
+			h = 0.5*ny+nx*0.1*cos(2.*M_PI*X);
       if(y>h)
       {
 	      rhoK[id*n_phase+0] = 0.;
@@ -181,29 +183,29 @@ void compute_gradient_rho(int x, int y)
 		{
       id1 = ((x+1+nx)%nx)*ny+y;
       id2 = ((x-1+nx)%nx)*ny+y;
-			gradx_rhoK[id*n_phase+k] = 0.5*(rhoK[id1*n_phase+k]/rho[id1] - rhoK[id2*n_phase+k]/rho[id2]);
+			gradx_rhoK[id*n_phase+k] = 0.5*(rhoK[id1*n_phase+k]/rho[id1]-rhoK[id2*n_phase+k]/rho[id2]);
 			if(x==0)
-				gradx_rhoK[id*n_phase+k] = -rhoK[id*n_phase+k]/rho[id] + rhoK[id1*n_phase+k]/rho[id1];
+				gradx_rhoK[id*n_phase+k] = -rhoK[id*n_phase+k]/rho[id]+rhoK[id1*n_phase+k]/rho[id1];
 			if(x==nx-1)
-				gradx_rhoK[id*n_phase+k] = rhoK[id*n_phase+k]/rho[id] - rhoK[id2*n_phase+k]/rho[id2];
+				gradx_rhoK[id*n_phase+k] = rhoK[id*n_phase+k]/rho[id]-rhoK[id2*n_phase+k]/rho[id2];
 
       id1 = x*ny+(y+1);
 			id2 = x*ny+(y+2);
-			grady_rhoK[id*n_phase+k] = -3./2*rhoK[id*n_phase+k]/rho[id] + 2.*rhoK[id1*n_phase+k]/rho[id1] - 1./2.*rhoK[id2*n_phase+k]/rho[id2];
+			grady_rhoK[id*n_phase+k] = -3./2*rhoK[id*n_phase+k]/rho[id]+2.*rhoK[id1*n_phase+k]/rho[id1]-1./2.*rhoK[id2*n_phase+k]/rho[id2];
 		}
 		if(y==ny-1) // NORTH wall
 		{
       id1 = ((x+1+nx)%nx)*ny+y;
       id2 = ((x-1+nx)%nx)*ny+y;
-			gradx_rhoK[id*n_phase+k] = 0.5*(rhoK[id1*n_phase+k]/rho[id1] - rhoK[id2*n_phase+k]/rho[id2]);
+			gradx_rhoK[id*n_phase+k] = 0.5*(rhoK[id1*n_phase+k]/rho[id1]-rhoK[id2*n_phase+k]/rho[id2]);
 			if(x==0)
-				gradx_rhoK[id*n_phase+k] = -rhoK[id*n_phase+k]/rho[id] + rhoK[id1*n_phase+k]/rho[id1];
+				gradx_rhoK[id*n_phase+k] = -rhoK[id*n_phase+k]/rho[id]+rhoK[id1*n_phase+k]/rho[id1];
 			if(x==nx-1)
-				gradx_rhoK[id*n_phase+k] = rhoK[id*n_phase+k]/rho[id] - rhoK[id2*n_phase+k]/rho[id2];
+				gradx_rhoK[id*n_phase+k] = rhoK[id*n_phase+k]/rho[id]-rhoK[id2*n_phase+k]/rho[id2];
 
       id1 = x*ny+(y-1);
 			id2 = x*ny+(y-2);
-			grady_rhoK[id*n_phase+k] = 3./2*rhoK[id*n_phase+k]/rho[id] - 2.*rhoK[id1*n_phase+k]/rho[id1] + 1./2.*rhoK[id2*n_phase+k]/rho[id2];
+			grady_rhoK[id*n_phase+k] = 3./2*rhoK[id*n_phase+k]/rho[id]-2.*rhoK[id1*n_phase+k]/rho[id1]+1./2.*rhoK[id2*n_phase+k]/rho[id2];
 		}
 	}
 }
@@ -311,7 +313,7 @@ void recoloring_and_streaming()
   }
 }
 ///----------------------------------------------------------------------------------------------------------------------------------
-int algorithm_CMS()
+int algorithm()
 {
   double R, nu, omega_eff, GX, GY;
 	int check = 0;
@@ -330,12 +332,9 @@ int algorithm_CMS()
 	      U += ftemp*cx[n];
 	      V += ftemp*cy[n];
 	    }
-	    // if(y == 0 || y == ny-1)
-	    // 	FY = 0.;
-	    // else
-		    FY = -(R - 0.5*(rho0_r+rho0_b))*gravity;
+	    FY = -(R-0.5*(rho0_r+rho0_b))*gravity;
 	    U /= R;
-	    V = (V + 0.5*FY)/R;
+	    V = (V+0.5*FY)/R;
 	    rho[id] = R;
 	    u[id] = U;
 			v[id] = V;
@@ -365,74 +364,44 @@ int algorithm_CMS()
 			omega_eff = 1./(3.*nu+0.5);
 			if(fabs(U)>100.)
         check = 1;
-      ///compute moments
 			U2 = U*U;
 			V2 = V*V;
 			UV = U*V;
 			U3 = U2*U;
 			V3 = V2*V;
-			/*k4 = k5 = 0;
-		  for(int n=0; n<np; n++)
-      {
-        CX = (double)cx[n];
-        CY = (double)cy[n];
-        ftemp = f[id*np+n];
-        k4 += ftemp*(CX*CX-CY*CY);
-				k5 += ftemp*CX*CY;
-			}*/
-			r4 = f[id*np+1]-f[id*np+2]+f[id*np+3]-f[id*np+4];
-			r5 = f[id*np+5]-f[id*np+6]+f[id*np+7]-f[id*np+8];
-			k4 = r4-R*(U2-V2);
-			k5 = r5-R*UV;
-      FY = -(R - 0.5*(rho0_r+rho0_b))*gravity;
-			// if(y==0 || y==ny-1)
-			// 	FY = 0.;
-			k0 = R;
-      k1 = FX/2.;
-      k2 = FY/2.;
-      k3 = -(6*R*(alpha - 1.))/5.;
-      k4 *= 1.-omega_eff;
-      k5 *= 1.-omega_eff;
-      k6 = 0.5*cs2*FY/R + R*V*(9.*alpha-4.)/15.;
-      k7 = 0.5*cs2*FX/R + R*U*(9.*alpha-4.)/15.;
-			k8 = -R*(3*alpha + 9*U2*alpha + 9*V2*alpha - 4*U2 - 4*V2 - 3.)/15.;
+			C = -1.5*(U2+V2);
+			FX = 0.;
+			FY = -(R-0.5*(rho0_r+rho0_b))*gravity;
+			for(int n=0; n<np; n++)
+			{
+				A = U*cx[n]+V*cy[n];
+				third_order = 1./(2.*cs6)*((cx[n]*cx[n]-cs2)*cy[n]*U2*V+(cy[n]*cy[n]-cs2)*cx[n]*U*V2);
+    		fourth_order = 1./(4.*cs8)*((cx[n]*cx[n]-cs2)*(cy[n]*cy[n]-cs2)*U2*V2);
+				if(n==0)
+					phi = alpha;
+				else if(n<5)
+					phi = (1.-alpha)/5.;
+				else
+					phi = (1.-alpha)/20.;
+				f[id*np+n] *= 1.-omega_eff;
+				f[id*np+n] += omega_eff*R*(phi+wf[n]*(3.*A+4.5*A*A+C+third_order+fourth_order));
 
-			/*k0 += 3.*(U*GY+V*GX)*nu;
-			k1 += -3.*(GY*U2+V*GX*U)*nu;
-			k2 += -3.*(GX*V2+U*GY*V)*nu;
-			k3 += (GY*(3.*U3+3.*U*V2+4.*U+4.*V)+GX*(3.*U2*V+4.*U+3.*V3+4.*V))*nu;
-			k4 += (GX*(3.*U2*V+2.*U-3.*V3)-GY*(-3.*U3+3.*U*V2+2.*V))*nu;
-			k5 += (GX*(3.*U*V2+V+U)+GY*(3.*V*U2+U+V))*nu;
-			k6 += (-GX*(3.*U2*V2+2.*U2+5.*U*V+2.*V2)-GY*(3.*U3*V+2.*U2+4.*U*V+V2))*nu;
-			k7 += (-GY*(3.*U2*V2+2.*U2+5.*U*V+2.*V2)-GX*(U2+3.*U*V3+4.*U*V+2.*V2))*nu;
-			k8 += (GX*(U3+3.*U2*V3+6.*U2*V+7.*U*V2+4.*U*cs2+2.*V3+V)+GY*(3.*U3*V2+2.*U3+7.*U2*V+6.*U*V2+U+V3+4*V*cs2))*nu;*/
- 			r0 = k0;
-			r1 = k1+R*U;
-			r2 = k2+R*V;
-			r3 = k3+2*U*k1+2*V*k2+R*(U2+V2);
-			r4 = k4+2*U*k1-2*V*k2+R*(U2-V2);
-			r5 = k5+U*k2+V*k1+R*UV;
-			r6 = k6+2*U*k5+0.5*V*(k3+k4)+U2*k2+2*UV*k1+R*U2*V;
-			r7 = k7+0.5*U*(k3-k4)+2*V*k5+V2*k1+2*UV*k2+R*U*V2;
-			r8 = k8+2*U*k7+2*V*k6+0.5*k3*(U2+V2)-0.5*k4*(U2-V2)+R*U2*V2+4*UV*k5+2*U*V2*k1+2*U2*V*k2;
-			/*r0 = k0;
-			r1 = k1;
-			r2 = k2;
-			r3 = k3;
-			r4 = k4;
-			r5 = k5;
-			r6 = k6;
-			r7 = k7;
-			r8 = k8;*/
-			f[id*np+0] = r0-r3+r8;
-      f[id*np+1] = 0.5*(r1-r7-r8) + 0.25*(r3+r4);
-      f[id*np+2] = 0.5*(r2-r6-r8) + 0.25*(r3-r4);
-      f[id*np+3] = 0.25*(r3+r4) + 0.5*(-r1+r7-r8);
-      f[id*np+4] = 0.25*(r3-r4) + 0.5*(-r2+r6-r8);
-      f[id*np+5] = 0.25*(r5+r6+r7+r8);
-      f[id*np+6] = 0.25*(r6-r5-r7+r8);
-      f[id*np+7] = 0.25*(r5-r6-r7+r8);
-      f[id*np+8] = 0.25*(r7-r6-r5+r8);
+				cx_norm = cx[n]/cs;
+				cy_norm = cy[n]/cs;
+				cx2_norm = cx_norm*cx_norm;
+				cy2_norm = cy_norm*cy_norm;
+				first_order = 1./cs*(FX*cx_norm+FY*cy_norm);
+				second_order = 1./(2.*cs2)*(2*FX*U*(cx2_norm-1.)+
+																   2*FY*V*(cy2_norm-1.)+
+																   2*(FX*V+FY*U)*(cx_norm*cy_norm));
+				third_order = 1./(6.*cs3)*((cx2_norm-1.)*cy_norm*(FX*U*V+U*FX*V+U*U*FY)+
+																	cx_norm*(cy2_norm-1.)*(FX*V*V+U*FY*V+U*V*FY));
+			  fourth_order = 1./(24.*cs4)*(cx2_norm-1.)*(cy2_norm-1.)*(FX*U*V*V+U*FX*V*V+U*U*FY*V+U*U*V*FY);
+				force_contribution = wf[n]*R*(first_order+second_order+third_order+fourth_order);
+				//force_contribution = wf[n]*R*(FX*(3.*(cx[n]-U)+9.*A*cx[n])+
+					//												    FY*(3.*(cy[n]-V)+9*A*cy[n]));
+				f[id*np+n] += (1.-0.5*omega_eff)*force_contribution;
+			}
 			perturbation(x, y, omega_eff);
 		}
 	recoloring_and_streaming();
@@ -473,7 +442,7 @@ int main(int argc, char *argv[])
 	printf("%lf %lf\n", rho0_b , rho0_r);
 	for(int i=0; i<nsteps; i++)
   {
-    check_mach = algorithm_CMS();
+    check_mach = algorithm();
     boundary();
     if(check_mach==1)
       goto labelA;

@@ -149,12 +149,15 @@ for i=1:length(cx)
  end
 T = simplify(T);
 N = simplify(T*M^(-1)); %shift matrix
-%T = M;
+N = Id;
 syms k0_pre k1_pre k2_pre k3_pre k4_pre k5_pre k6_pre k7_pre k8_pre real
 syms k1_star k2_star k3_star k4_star k5_star k6_star k7_star k8_star real
-K_pre = simplify(T*f); %pre-collision central moments
-K_eq = simplify(T*feq); % equilibrium central moments
-K_force = simplify(T*Force); % forcing term central moments
+R_pre = simplify(M*f)
+K_pre = simplify(N*R_pre)
+R_eq = simplify(M*feq);
+K_eq = simplify(N*R_eq) 
+R_force = simplify(M*Force);
+K_force = simplify(N*R_force); % forcing term central moments
 K_pre(5) = k4_pre;
 K_pre(6) = k5_pre;
 K_star = simplify((Id-Lambda)*K_pre + Lambda*K_eq + (Id-Lambda/2)*K_force ) %post-collision central moments
