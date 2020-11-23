@@ -14,7 +14,7 @@ using namespace std;
 const bool plot_vtk = true;
 const int n_phase = 2;
 const int nx = 200, ny = 4*nx, np = 9;
-const double NX = (double)nx-1, gravity = 0.05*0.05/NX, rho0_b = 1., At = 0.5, rho0_r = -rho0_b*(At+1)/(At-1), Reynolds = 128., nu = sqrt(NX*gravity)*NX/Reynolds, T = sqrt(NX/gravity/At);
+const double NX = (double)nx-1, gravity = 0.1*0.1/NX, rho0_b = 1., At = 0.5, rho0_r = -rho0_b*(At+1)/(At-1), Reynolds = 128., nu = sqrt(NX*gravity)*NX/Reynolds, T = sqrt(NX/gravity/At);
 const double cs2 = 1./3., beta = 0.7, alpha_b = 4./9., alpha_r = 1.-(1.-alpha_b)*rho0_b/rho0_r;
 vector<const int> cx = {0, 1, 0, -1, 0, 1, -1, -1, 1},
 									cy = {0, 0, 1, 0, -1, 1, 1, -1, -1},
@@ -294,6 +294,8 @@ void recoloring_and_streaming()
   	        newy = (newy+ny)%ny;
   	      idn = newx*ny+newy;
         	streamed[idn] = (f_old[id*np+n]+tmp)*rhoK_old[id*n_phase+k]/R;
+					if(y==0 || y==ny-1)
+						streamed[idn] = (f_old[id*np+opp[n]]+tmp)*rhoK_old[id*n_phase+k]/R;
 				}
       for(int x=0; x<nx; x++)
 		    for(int y=0; y<ny; y++)
