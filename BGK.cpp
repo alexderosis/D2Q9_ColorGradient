@@ -13,7 +13,7 @@ using namespace std;
 ///----------------------------------------------------------------------------------------------------------------------------------
 const bool plot_vtk = true;
 const int n_phase = 2;
-const int nx = 200, ny = 4*nx, np = 9;
+const int nx = 100, ny = 4*nx, np = 9;
 const double NX = (double)nx-1, gravity = 0.1*0.1/NX, rho0_b = 1., At = 0.5, rho0_r = -rho0_b*(At+1)/(At-1), Reynolds = 128., nu = sqrt(NX*gravity)*NX/Reynolds, T = sqrt(NX/gravity/At);
 const double cs2 = 1./3., beta = 0.7, alpha_b = 4./9., alpha_r = 1.-(1.-alpha_b)*rho0_b/rho0_r;
 vector<const int> cx = {0, 1, 0, -1, 0, 1, -1, -1, 1},
@@ -334,9 +334,12 @@ int algorithm()
 	      U += ftemp*cx[n];
 	      V += ftemp*cy[n];
 	    }
-	    FY = -(R-0.5*(rho0_r+rho0_b))*gravity;
-	    U /= R;
+			if(y!=ny-1 || y!=0)
+	    	FY = -(R-0.5*(rho0_r+rho0_b))*gravity;
+	    U = (U+0.5*FX)/R;
 	    V = (V+0.5*FY)/R;
+			if(y==0 || y==ny-1)
+				U = V = 0.;
 	    rho[id] = R;
 	    u[id] = U;
 			v[id] = V;
@@ -373,7 +376,8 @@ int algorithm()
 			V3 = V2*V;
 			C = -1.5*(U2+V2);
 			FX = 0.;
-			FY = -(R-0.5*(rho0_r+rho0_b))*gravity;
+			if(y!=ny-1 || y!=0)
+				FY = -(R-0.5*(rho0_r+rho0_b))*gravity;
 			for(int n=0; n<np; n++)
 			{
 				A = U*cx[n]+V*cy[n];
