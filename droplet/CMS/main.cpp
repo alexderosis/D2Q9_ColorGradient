@@ -13,16 +13,16 @@ using namespace std;
 ///----------------------------------------------------------------------------------------------------------------------------------
 const bool plot_vtk = true;
 const int n_phase = 2;
-const int nx = 500, ny = 2*nx, np = 9;
-const double NX = (double)nx-1, gravity = 0.05*0.05/NX, rho0_b = 1., At = 0.85, rho0_r = -rho0_b*(At+1)/(At-1), Reynolds = 300000., nu = sqrt(NX*gravity)*NX/Reynolds, T = sqrt(NX/gravity);
-const double cs2 = 1./3., beta = 0.7, alpha_b = 4./9., alpha_r = 1.-(1.-alpha_b)*rho0_b/rho0_r;
+const int nx = 200, ny = nx, np = 9;
+const double radius = nx/10, rho0_b = 1., rho0_r = 100., nu = 0.01, gravity = 0.;
+const double cs2 = 1./3., beta = 1, alpha_b = 4./9., alpha_r = 1.-(1.-alpha_b)*rho0_b/rho0_r;
 vector<const int> cx = {0, 1, 0, -1, 0, 1, -1, -1, 1},
 									cy = {0, 0, 1, 0, -1, 1, 1, -1, -1},
 									opp= {0, 3, 4, 1, 2, 7, 8, 5, 6};
 vector<const double> wf = {4./9., 1./9., 1./9., 1./9., 1./9., 1./36., 1./36., 1./36., 1./36.};
 vector<const double> B = {-4/27., 2/27., 2/27., 2/27., 2/27., 5/108., 5/108., 5/108., 5/108.};
 vector<const double> alphaK = {alpha_b, alpha_r}, ni = {nu, nu};
-const int nsteps = (int)(3*T+1), n_out = (int)(T/100);
+const int nsteps = 10001, n_out = 100;
 vector<double> f(nx*ny*np,0.), f_old(nx*ny*np,0.), rhoK(nx*ny*n_phase,0.), rhoK_old(nx*ny*n_phase,0.), rho(nx*ny,0.), u(nx*ny,0.), v(nx*ny,0.), rho_old(nx*ny,0.);
 vector<double> gradx_rhoK(nx*ny*n_phase,0.), grady_rhoK(nx*ny*n_phase,0.);
 vector<double> gradx_rho(nx*ny,0.), grady_rho(nx*ny,0.);
@@ -103,25 +103,14 @@ void write_fluid_vtk(int time)
 ///----------------------------------------------------------------------------------------------------------------------------------
 void initial_state()
 {
-	double phi, X;
-	int max = 1, min = -1;
-	double h, an, bn;
+	double phi;
 	for(int x=0; x<nx; x++)
     for(int y=0; y<ny; y++)
 		{
       id = x*ny+y;
 			U = u[id] = 0.;
       V = v[id] = 0.;
-      X = (double)x / ((double)nx-1);
-			h = 0;
-			for(int n=30; n<40; n++)
-			{
-				an = rand()%(max-min + 1) + min;
-				bn = rand()%(max-min + 1) + min;
-				h += an*cos(2.*M_PI*n*X)+bn*sin(2.*M_PI*n*X);
-			}
-			h = 0.5*ny+nx*0.002*h;
-      if(y>h)
+      if((x-nx/2)*(x-nx/2)+(y-ny/2)*(y-ny/2)<radius*radius)
       {
 	      rhoK[id*n_phase+0] = 0.;
         rhoK[id*n_phase+1] = rho0_r;
@@ -165,26 +154,25 @@ void compute_gradient_rho(int x, int y)
 			gradx_rho[id] = 0.;
 			grady_rho[id] = 0.;
 		}
-		if(y>0 && y<ny-1)
-	    /*for(int n=1; n<np; n++)
-		  {
-			  newx = x+cx[n];
-			  newy = y+cy[n];
-			  if(x==0 || x==nx-1)
-				  newx = (newx+nx)%nx;
-			  if(y==0 || y==ny-1)
-				 newy = (newy+ny)%ny;
-        idn = newx*ny+newy;
-	  		value = rhoK[idn*n_phase+k]/rho_old[idn];
-			  gradx_rhoK[id*n_phase+k] += 3.*wf[n]*cx[n]*value;
-			  grady_rhoK[id*n_phase+k] += 3.*wf[n]*cy[n]*value;
-				if(k==0)
-				{
-					gradx_rho[id] += 3.*wf[n]*cx[n]*rho[idn];
-					grady_rho[id] += 3.*wf[n]*cy[n]*rho[idn];
-				}
-			}*/
-			for(int n=1; n<np_extended; n++)
+		for(int n=1; n<np; n++)
+		{
+			newx = x+cx[n];
+			newy = y+cy[n];
+			if(x==0 || x==nx-1)
+				newx = (newx+nx)%nx;
+			if(y==0 || y==ny-1)
+				newy = (newy+ny)%ny;
+      idn = newx*ny+newy;
+	  	value = rhoK[idn*n_phase+k]/rho_old[idn];
+			gradx_rhoK[id*n_phase+k] += 3.*wf[n]*cx[n]*value;
+			grady_rhoK[id*n_phase+k] += 3.*wf[n]*cy[n]*value;
+			if(k==0)
+			{
+				gradx_rho[id] += 3.*wf[n]*cx[n]*rho[idn];
+				grady_rho[id] += 3.*wf[n]*cy[n]*rho[idn];
+			}
+		}
+			/*for(int n=1; n<np_extended; n++)
 			{
 				newx = (x+cx[n]+nx)%nx;
 				newy = (y+cy[n]+ny)%ny;
@@ -210,35 +198,7 @@ void compute_gradient_rho(int x, int y)
 					gradx_rho[id] += weight*cx[n]*rho[idn];
 					grady_rho[id] += weight*cy[n]*rho[idn];
 				}
-			}
-		if(y==0) // SOUTH wall
-		{
-      id1 = ((x+1+nx)%nx)*ny+y;
-      id2 = ((x-1+nx)%nx)*ny+y;
-			gradx_rhoK[id*n_phase+k] = 0.5*(rhoK[id1*n_phase+k]/rho_old[id1] - rhoK[id2*n_phase+k]/rho_old[id2]);
-			if(x==0)
-				gradx_rhoK[id*n_phase+k] = -rhoK[id*n_phase+k]/rho_old[id] + rhoK[id1*n_phase+k]/rho_old[id1];
-			if(x==nx-1)
-				gradx_rhoK[id*n_phase+k] = rhoK[id*n_phase+k]/rho_old[id] - rhoK[id2*n_phase+k]/rho_old[id2];
-
-      id1 = x*ny+(y+1);
-			id2 = x*ny+(y+2);
-			grady_rhoK[id*n_phase+k] = -3./2*rhoK[id*n_phase+k]/rho_old[id] + 2.*rhoK[id1*n_phase+k]/rho_old[id1] - 1./2.*rhoK[id2*n_phase+k]/rho_old[id2];
-		}
-		if(y==ny-1) // NORTH wall
-		{
-      id1 = ((x+1+nx)%nx)*ny+y;
-      id2 = ((x-1+nx)%nx)*ny+y;
-			gradx_rhoK[id*n_phase+k] = 0.5*(rhoK[id1*n_phase+k]/rho_old[id1] - rhoK[id2*n_phase+k]/rho_old[id2]);
-			if(x==0)
-				gradx_rhoK[id*n_phase+k] = -rhoK[id*n_phase+k]/rho_old[id] + rhoK[id1*n_phase+k]/rho_old[id1];
-			if(x==nx-1)
-				gradx_rhoK[id*n_phase+k] = rhoK[id*n_phase+k]/rho_old[id] - rhoK[id2*n_phase+k]/rho_old[id2];
-
-      id1 = x*ny+(y-1);
-			id2 = x*ny+(y-2);
-			grady_rhoK[id*n_phase+k] = 3./2*rhoK[id*n_phase+k]/rho_old[id] - 2.*rhoK[id1*n_phase+k]/rho_old[id1] + 1./2.*rhoK[id2*n_phase+k]/rho_old[id2];
-		}
+			}*/
 	}
 }
 ///----------------------------------------------------------------------------------------------------------------------------------
@@ -349,9 +309,9 @@ int algorithm_CMS()
 	      V += ftemp*cy[n];
 	    }
 			R1 = 1./R;
-		  FY = -(R - 0.5*(rho0_r+rho0_b))*gravity;
+		  FY = -(R-0.5*(rho0_r+rho0_b))*gravity;
 	    U *= R1;
-	    V = (V + 0.5*FY)*R1;
+	    V = (V+0.5*FY)*R1;
 	    rho[id] = R;
 	    u[id] = U;
 			v[id] = V;
@@ -386,11 +346,11 @@ int algorithm_CMS()
       k3 = -6.*R*(alpha-1.)/5.;
       k4 *= 1.-omega_eff;
       k5 *= 1.-omega_eff;
-      k6 = 0.5*cs2*FY*R1 + R*V*(9.*alpha-4.)/15.;
-      k7 = 0.5*cs2*FX*R1 + R*U*(9.*alpha-4.)/15.;
+      k6 = 0.5*cs2*FY*R1+R*V*(9.*alpha-4.)/15.;
+      k7 = 0.5*cs2*FX*R1+R*U*(9.*alpha-4.)/15.;
 			k8 = -R*(3.*(alpha-1.)+(U2+V2)*(9.*alpha-4.))/15.;
 
-			k0 += 3.*(U*GY+V*GX)*nu_eff;
+			/*k0 += 3.*(U*GY+V*GX)*nu_eff;
 			k1 += -3.*(GY*U2+V*GX*U)*nu_eff;
 			k2 += -3.*(GX*V2+U*GY*V)*nu_eff;
 			k3 += (GY*(3.*(U3+U*V2)+4.*(U+V))+GX*(3.*(U2*V+V3)+4.*(U+V)))*nu_eff;
@@ -398,17 +358,17 @@ int algorithm_CMS()
 			k5 += (GX*(3.*U*V2+V+U)+GY*(3.*V*U2+U+V))*nu_eff;
 			k6 += (-GX*(3.*U2*V2+2.*(U2+V2)+5.*UV)-GY*(3.*U3*V+2.*U2+4.*UV+V2))*nu_eff;
 			k7 += (-GY*(3.*U2*V2+2.*(U2+V2)+5.*UV)-GX*(3.*U*V3+2.*V2+4.*UV+U2))*nu_eff;
-			k8 += (GX*(3.*U2*V3+U3+6.*U2*V+7.*U*V2+4.*U*cs2+2.*V3+V)+GY*(3.*U3*V2+2.*U3+7.*U2*V+6.*U*V2+U+V3+4*V*cs2))*nu_eff;
+			k8 += (GX*(3.*U2*V3+U3+6.*U2*V+7.*U*V2+4.*U*cs2+2.*V3+V)+GY*(3.*U3*V2+2.*U3+7.*U2*V+6.*U*V2+U+V3+4*V*cs2))*nu_eff;*/
 
-	// 		k0 += 3.*nu_eff*(U*gradyR+V*gradxR);
-	// 		k1 += -3.*nu_eff*(gradyR*U2+V*gradxR*U);
- //      k2 += -3.*nu_eff*(gradxR*V2+U*gradyR*V);
- //      k3 += nu_eff*(gradyR*(3*(U3+U*V2)+4*(U+V))+gradxR*(3*(U2*V+V3)+4*(U+V)));
- //      k4 += nu_eff*(gradxR*omega*(3*(U2*V+V3)+2*U)-gradyR*omega*(3*(U*V2-U3)+2*V));
- //      k5 += nu_eff*(gradxR*omega*(3*U*V2+V+U)+gradyR*omega*(3*V*U2+U+V));
- //      k6 += nu_eff*(- gradxR*(3*U2*V2 + 2*(U2+V2) + 5*UV) - gradyR*(3*U3*V + 2*U2 + 4*UV + V2));
- //                                                   (- gradyR*(3*U^2*V^2 + 2*(U2+V2) + 5*U*V) - gradxR*(U^2 + 3*U*V^3 + 4*U*V + 2*V^2))*nu
- // (gradxR*(U^3 + 3*U^2*V^3 + 6*U^2*V + 7*U*V^2 + (4*U)/3 + 2*V^3 + V) + gradyR*(3*U^3*V^2 + 2*U^3 + 7*U^2*V + 6*U*V^2 + U + V^3 + (4*V)/3))*nu
+	 		/*k0 += 3.*nu_eff*(U*GY+V*GX);
+	 		k1 += -3.*nu_eff*(GY*U2+V*GX*U);
+      k2 += -3.*nu_eff*(GX*V2+U*GY*V);
+      k3 += nu_eff*(GY*(3*(U3+U*V2)+4*(U+V))+GX*(3*(U2*V+V3)+4*(U+V)));
+      k4 += nu_eff*(GX*omega_eff*(3*(U2*V+V3)+2*U)-GY*omega_eff*(3*(U*V2-U3)+2*V));
+      k5 += nu_eff*(GX*omega_eff*(3*U*V2+V+U)+GY*omega_eff*(3*V*U2+U+V));
+      k6 += nu_eff*(- GX*(3*U2*V2+2*(U2+V2)+5*UV)-GY*(3*U3*V+2*U2+4*UV+V2));
+      k7 += nu_eff*(- GY*(3*U2*V2+2*(U2+V2)+5*UV)-GX*(U2+3*U*V3+4*UV+2*V2));
+			k8 += nu_eff*(GX*(U3+3*U2*V3+6*U2*V+7*U*V2+(4*U)/3+2*V3+V)+GY*(3*U3*V2+2*U3+7*U2*V+6*U*V2+U+V3+(4*V)/3));*/
 
  			r0 = k0;
 			r1 = k1+R*U;
@@ -429,10 +389,10 @@ int algorithm_CMS()
 			r7 = k7;
 			r8 = k8;*/
 			f[id*np+0] = r0-r3+r8;
-      f[id*np+1] = 0.5*(r1-r7-r8) + 0.25*(r3+r4);
-      f[id*np+2] = 0.5*(r2-r6-r8) + 0.25*(r3-r4);
-      f[id*np+3] = 0.25*(r3+r4) + 0.5*(-r1+r7-r8);
-      f[id*np+4] = 0.25*(r3-r4) + 0.5*(-r2+r6-r8);
+      f[id*np+1] = 0.5*(r1-r7-r8)+0.25*(r3+r4);
+      f[id*np+2] = 0.5*(r2-r6-r8)+0.25*(r3-r4);
+      f[id*np+3] = 0.25*(r3+r4)+0.5*(-r1+r7-r8);
+      f[id*np+4] = 0.25*(r3-r4)+0.5*(-r2+r6-r8);
       f[id*np+5] = 0.25*(r5+r6+r7+r8);
       f[id*np+6] = 0.25*(r6-r5-r7+r8);
       f[id*np+7] = 0.25*(r5-r6-r7+r8);
@@ -472,7 +432,7 @@ int main(int argc, char *argv[])
 	for(int i=0; i<nsteps; i++)
   {
     check_mach = algorithm_CMS();
-    boundary();
+    //boundary();
     if(check_mach==1)
       goto labelA;
 		if(plot_vtk==true && i%n_out==0)

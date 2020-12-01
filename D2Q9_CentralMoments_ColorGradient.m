@@ -19,6 +19,7 @@
 
 %clear all
 clc
+addpath('/Applications/Matlab_R2019b.app/toolbox/symbolic/symbolic')
 
 syms U V R omega f0 f1 f2 f3 f4 f5 f6 f7 f8 Fx Fy abar...
      nu gradxR gradyR real
@@ -80,7 +81,7 @@ for i=1:length(cx)
     
     ci = [cx(i) cy(i)];
     correction(i) = nu*( psi(i)*dot(u,gradR) + xi(i)*sum(sum(G*(ci'*ci))) );
-    feq(i) = feq(i) + correction(i);
+    %feq(i) = feq(i) + correction(i);
     % build the complete forcing terms
     hat_cx = cx(i)/cs;
     hat_cy = cy(i)/cs;
