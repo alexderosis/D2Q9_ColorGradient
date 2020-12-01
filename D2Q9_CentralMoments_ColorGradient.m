@@ -17,7 +17,7 @@
 % Day: 1st Feb 2020
 %--------------------------------------------------------------------------
 
-clear all
+%clear all
 clc
 
 syms U V R omega f0 f1 f2 f3 f4 f5 f6 f7 f8 Fx Fy abar...
@@ -80,7 +80,7 @@ for i=1:length(cx)
     
     ci = [cx(i) cy(i)];
     correction(i) = nu*( psi(i)*dot(u,gradR) + xi(i)*sum(sum(G*(ci'*ci))) );
-    %feq(i) = feq(i) + correction(i);
+    feq(i) = feq(i) + correction(i);
     % build the complete forcing terms
     hat_cx = cx(i)/cs;
     hat_cy = cy(i)/cs;
@@ -149,7 +149,7 @@ for i=1:length(cx)
  end
 T = simplify(T);
 N = simplify(T*M^(-1)); %shift matrix
-N = Id;
+%N = Id;
 syms k0_pre k1_pre k2_pre k3_pre k4_pre k5_pre k6_pre k7_pre k8_pre real
 syms k1_star k2_star k3_star k4_star k5_star k6_star k7_star k8_star real
 R_pre = simplify(M*f)

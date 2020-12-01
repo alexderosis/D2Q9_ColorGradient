@@ -13,8 +13,8 @@ using namespace std;
 ///----------------------------------------------------------------------------------------------------------------------------------
 const bool plot_vtk = true;
 const int n_phase = 2;
-const int nx = 1000, ny = 2*nx, np = 9;
-const double NX = (double)nx-1, gravity = 0.05*0.05/NX, rho0_b = 1., At = 0.7, rho0_r = -rho0_b*(At+1)/(At-1), Reynolds = 3000000., nu = sqrt(NX*gravity)*NX/Reynolds, T = sqrt(NX/gravity/At);
+const int nx = 500, ny = 2*nx, np = 9;
+const double NX = (double)nx-1, gravity = 0.05*0.05/NX, rho0_b = 1., At = 0.85, rho0_r = -rho0_b*(At+1)/(At-1), Reynolds = 300000., nu = sqrt(NX*gravity)*NX/Reynolds, T = sqrt(NX/gravity);
 const double cs2 = 1./3., beta = 0.7, alpha_b = 4./9., alpha_r = 1.-(1.-alpha_b)*rho0_b/rho0_r;
 vector<const int> cx = {0, 1, 0, -1, 0, 1, -1, -1, 1},
 									cy = {0, 0, 1, 0, -1, 1, 1, -1, -1},
@@ -22,7 +22,7 @@ vector<const int> cx = {0, 1, 0, -1, 0, 1, -1, -1, 1},
 vector<const double> wf = {4./9., 1./9., 1./9., 1./9., 1./9., 1./36., 1./36., 1./36., 1./36.};
 vector<const double> B = {-4/27., 2/27., 2/27., 2/27., 2/27., 5/108., 5/108., 5/108., 5/108.};
 vector<const double> alphaK = {alpha_b, alpha_r}, ni = {nu, nu};
-const int nsteps = (int)(10*T+1), n_out = (int)(T/100);
+const int nsteps = (int)(3*T+1), n_out = (int)(T/100);
 vector<double> f(nx*ny*np,0.), f_old(nx*ny*np,0.), rhoK(nx*ny*n_phase,0.), rhoK_old(nx*ny*n_phase,0.), rho(nx*ny,0.), u(nx*ny,0.), v(nx*ny,0.), rho_old(nx*ny,0.);
 vector<double> gradx_rhoK(nx*ny*n_phase,0.), grady_rhoK(nx*ny*n_phase,0.);
 vector<double> gradx_rho(nx*ny,0.), grady_rho(nx*ny,0.);
@@ -31,7 +31,7 @@ double colorGradX, colorGradY, colorGradNorm, tempx, tempy, norm_c, tmp, tmp3, p
 double alpha, totalMass, streamed;
 vector<double> kTotalMass(nx*ny,0.);
 const double surfaceTension = 1E-5;
-double A_, R1, nu_eff, omega_eff, GX, GY;
+double A_, R1, nu_eff, omega_eff, GX, GY, Ckl;
 int check;
 ///-CMS
 vector<double> temp_pop(np,0.);
@@ -155,11 +155,11 @@ void compute_gradient_rho(int x, int y)
   {
   	gradx_rhoK[id*n_phase+k] = 0.;
     grady_rhoK[id*n_phase+k] = 0.;
-		/*if(k==0)
+		if(k==0)
 		{
 			gradx_rho[id] = 0.;
 			grady_rho[id] = 0.;
-		}*/
+		}
 		if(y>0 && y<ny-1)
 	    for(int n=1; n<np; n++)
 		  {
@@ -173,11 +173,11 @@ void compute_gradient_rho(int x, int y)
 	  		value = rhoK[idn*n_phase+k]/rho_old[idn];
 			  gradx_rhoK[id*n_phase+k] += 3.*wf[n]*cx[n]*value;
 			  grady_rhoK[id*n_phase+k] += 3.*wf[n]*cy[n]*value;
-				/*if(k==0)
+				if(k==0)
 				{
 					gradx_rho[id] += 3.*wf[n]*cx[n]*rho[idn];
 					grady_rho[id] += 3.*wf[n]*cy[n]*rho[idn];
-				}*/
+				}
 			}
 		if(y==0) // SOUTH wall
 		{
@@ -216,7 +216,6 @@ void perturbation(int x, int y, double omega)
 	A_ = 9*surfaceTension*omega*0.25;
 	R1 = 1./rho[id];
   for(int k=0; k<n_phase; k++)
-  {
     for(int l=0; l<n_phase; l++)
     	if(k!=l)
     	{
@@ -226,15 +225,14 @@ void perturbation(int x, int y, double omega)
           		        	 grady_rhoK[id*n_phase+l]*rhoK[id*n_phase+k]);
     		colorGradNorm = max(sqrt(colorGradX*colorGradX+
   	          							     colorGradY*colorGradY),1e-12);
-    		double Ckl = min(1E6*rhoK[id*n_phase+l]*rhoK[id*n_phase+k]/rho0_r/rho0_b,1.0);
+    		Ckl = min(1E6*rhoK[id*n_phase+l]*rhoK[id*n_phase+k]/rho0_r/rho0_b,1.0);
     		for(int n=0; n<np; n++)
     		{
     			tmp = colorGradX*cx[n]+colorGradY*cy[n];
-      		tmp3 = 0.5*A_*colorGradNorm*(wf[n]*tmp*tmp/colorGradNorm/colorGradNorm-B[n]);
+      		tmp3 = 0.5*A_*colorGradNorm*Ckl*(wf[n]*tmp*tmp/colorGradNorm/colorGradNorm-B[n]);
       		f[id*np+n] += tmp3;
     		}
 		  }
-	}
 }
 ///----------------------------------------------------------------------------------------------------------------------------------
 void recoloring_and_streaming()
@@ -360,15 +358,15 @@ int algorithm_CMS()
       k7 = 0.5*cs2*FX*R1 + R*U*(9.*alpha-4.)/15.;
 			k8 = -R*(3.*(alpha-1.)+(U2+V2)*(9.*alpha-4.))/15.;
 
-			/*k0 += 3.*(U*GY+V*GX)*nu;
-			k1 += -3.*(GY*U2+V*GX*U)*nu;
-			k2 += -3.*(GX*V2+U*GY*V)*nu;
-			k3 += (GY*(3.*U3+3.*U*V2+4.*U+4.*V)+GX*(3.*U2*V+4.*U+3.*V3+4.*V))*nu;
-			k4 += (GX*(3.*U2*V+2.*U-3.*V3)-GY*(-3.*U3+3.*U*V2+2.*V))*nu;
-			k5 += (GX*(3.*U*V2+V+U)+GY*(3.*V*U2+U+V))*nu;
-			k6 += (-GX*(3.*U2*V2+2.*U2+5.*U*V+2.*V2)-GY*(3.*U3*V+2.*U2+4.*U*V+V2))*nu;
-			k7 += (-GY*(3.*U2*V2+2.*U2+5.*U*V+2.*V2)-GX*(U2+3.*U*V3+4.*U*V+2.*V2))*nu;
-			k8 += (GX*(U3+3.*U2*V3+6.*U2*V+7.*U*V2+4.*U*cs2+2.*V3+V)+GY*(3.*U3*V2+2.*U3+7.*U2*V+6.*U*V2+U+V3+4*V*cs2))*nu;*/
+			k0 += 3.*(U*GY+V*GX)*nu_eff;
+			k1 += -3.*(GY*U2+V*GX*U)*nu_eff;
+			k2 += -3.*(GX*V2+U*GY*V)*nu_eff;
+			k3 += (GY*(3.*(U3+U*V2)+4.*(U+V))+GX*(3.*(U2*V+V3)+4.*(U+V)))*nu_eff;
+			k4 += (GX*(3.*(U2*V-V3)+2.*U)-GY*(3*(U*V2-U3)+2.*V))*nu_eff;
+			k5 += (GX*(3.*U*V2+V+U)+GY*(3.*V*U2+U+V))*nu_eff;
+			k6 += (-GX*(3.*U2*V2+2.*(U2+V2)+5.*UV)-GY*(3.*U3*V+2.*U2+4.*UV+V2))*nu_eff;
+			k7 += (-GY*(3.*U2*V2+2.*(U2+V2)+5.*UV)-GX*(3.*U*V3+2.*V2+4.*UV+U2))*nu_eff;
+			k8 += (GX*(3.*U2*V3+U3+6.*U2*V+7.*U*V2+4.*U*cs2+2.*V3+V)+GY*(3.*U3*V2+2.*U3+7.*U2*V+6.*U*V2+U+V3+4*V*cs2))*nu_eff;
  			r0 = k0;
 			r1 = k1+R*U;
 			r2 = k2+R*V;
