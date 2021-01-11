@@ -149,8 +149,9 @@ for i=1:length(cx)
     M(9,i) = CX*CX*CY*CY;
  end
 T = simplify(T);
-N = simplify(T*M^(-1)); %shift matrix
-%N = Id;
+T = M;
+%N = simplify(T*M^(-1)); %shift matrix
+N = Id;
 syms k0_pre k1_pre k2_pre k3_pre k4_pre k5_pre k6_pre k7_pre k8_pre real
 syms k1_star k2_star k3_star k4_star k5_star k6_star k7_star k8_star real
 R_pre = simplify(M*f)

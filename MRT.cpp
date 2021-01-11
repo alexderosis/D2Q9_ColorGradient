@@ -46,7 +46,7 @@ double FX, FY;
 void write_fluid_vtk(int time)
 {
 	stringstream output_filename;
-	output_filename << "vtk_fluid/fluid_t" << time << ".vtk";
+	output_filename << "vtk_fluid_MRT/fluid_t" << time << ".vtk";
 	ofstream output_file;
 	output_file.open(output_filename.str().c_str());
 
@@ -364,13 +364,13 @@ int algorithm_MRT()
 			r5 = r5*(1.-omega_eff)+R*U*V*omega_eff-(0.5*omega_eff-1.)*(FY*U+FX*V)/R;
 			r6 = 0.5*cs2*(3.*FY*U2+6.*FX*V*U+FY)/R+R*V*(3.*U2+1.)*cs2;
 			r7 = 0.5*cs2*(3.*FX*V2+6.*FY*U*V+FX)/R+R*U*(3.*V2+1.)*cs2;
-			r8 = R*(U2*V2+cs2*U2+cs2*V2-alpha/5.+1./5.)/15.+cs2*(3.*FY*U2*V+3.*FX*U*V2+FX*U+FY*V)/R;
+			r8 = R*(U2*V2+cs2*U2+cs2*V2-alpha/5.+1./5.)+cs2*(FY*U2*V+FX*U*V2+cs2*FX*U+cs2*FY*V)/R;
 
-			r0 += 3.*nu_eff*(U*GY+V*GX);
-			r3 += 4.*nu_eff*(GX+GY)*(U+V);
-			r4 += 2.*nu_eff*omega_eff*(U*GX-V*GY);
-      r5 += nu_eff*omega_eff*(U+V)*(GX+GY);
- 		  r8 += nu_eff*cs2*(GX*(4.*U+3.*V)+GY*(3.*U+4.*V));
+			//r0 += 3.*nu_eff*(U*GY+V*GX);
+			//r3 += 4.*nu_eff*(GX+GY)*(U+V);
+			//r4 += 2.*nu_eff*omega_eff*(U*GX-V*GY);
+      //r5 += nu_eff*omega_eff*(U+V)*(GX+GY);
+ 		  //r8 += nu_eff*cs2*(GX*(4.*U+3.*V)+GY*(3.*U+4.*V));
 
 			f[id*np+0] = r0-r3+r8;
       f[id*np+1] = 0.5*(r1-r7-r8)+0.25*(r3+r4);
@@ -409,7 +409,7 @@ int main(int argc, char *argv[])
 {
 	FILE *data_output;
 	data_output = fopen("data_MRT.txt","wt");
-	//system("mkdir vtk_fluid");
+	system("mkdir vtk_fluid_MRT");
 	initial_state();
 	int check_mach = 0;
 	printf("%lf %lf\n", rho0_b , rho0_r);
@@ -419,8 +419,8 @@ int main(int argc, char *argv[])
     boundary();
     if(check_mach==1)
       goto labelA;
-		//if(plot_vtk==true && i%n_out==0)
-			//write_fluid_vtk(i);
+		if(plot_vtk==true && i%n_out==0)
+			write_fluid_vtk(i);
     if(i%1==0)
       printf("Iteration %d of %d. TotMass=%e\n", i, nsteps, totalMass);
     fprintf(data_output,"%d    %e\n", i, totalMass);

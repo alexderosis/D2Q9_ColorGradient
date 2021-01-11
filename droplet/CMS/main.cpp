@@ -14,7 +14,7 @@ using namespace std;
 const bool plot_vtk = true;
 const int n_phase = 2;
 const int nx = 200, ny = nx, np = 9;
-const double radius = nx/10, rho0_b = 1., rho0_r = 100., nu = 0.01, gravity = 0.;
+const double radius = nx/10, rho0_b = 1., rho0_r = 1000., nu = 0.01, gravity = 0.;
 const double cs2 = 1./3., beta = 1, alpha_b = 4./9., alpha_r = 1.-(1.-alpha_b)*rho0_b/rho0_r;
 vector<const int> cx = {0, 1, 0, -1, 0, 1, -1, -1, 1},
 									cy = {0, 0, 1, 0, -1, 1, 1, -1, -1},

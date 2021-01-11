@@ -14,7 +14,7 @@ using namespace std;
 const bool plot_vtk = true;
 const int n_phase = 2;
 const int nx = 200, ny = nx, np = 9;
-const double radius = nx/10, rho0_b = 1., rho0_r = 100., nu = 0.01, gravity = 0.;
+const double radius = nx/10, rho0_b = 1., rho0_r = 10000., nu = 0.01, gravity = 0.;
 const double cs2 = 1./3., beta = 1, alpha_b = 4./9., alpha_r = 1.-(1.-alpha_b)*rho0_b/rho0_r;
 vector<const int> cx = {0, 1, 0, -1, 0, 1, -1, -1, 1},
 									cy = {0, 0, 1, 0, -1, 1, 1, -1, -1},
@@ -347,7 +347,6 @@ int algorithm_MRT()
 			}*/
 			r4 = f[id*np+1]-f[id*np+2]+f[id*np+3]-f[id*np+4];
 			r5 = f[id*np+5]-f[id*np+6]+f[id*np+7]-f[id*np+8];
-      FY = -(R-0.5*(rho0_r+rho0_b))*gravity;
 			r0 = R;
 			r1 = R*U+0.5*FX/R;
 			r2 = R*V+0.5*FY/R;
@@ -356,7 +355,7 @@ int algorithm_MRT()
 			r5 = r5*(1.-omega_eff)+R*U*V*omega_eff-(0.5*omega_eff-1.)*(FY*U+FX*V)/R;
 			r6 = 0.5*cs2*(3.*FY*U2+6.*FX*V*U+FY)/R+R*V*(3.*U2+1.)*cs2;
 			r7 = 0.5*cs2*(3.*FX*V2+6.*FY*U*V+FX)/R+R*U*(3.*V2+1.)*cs2;
-			r8 = R*(U2*V2+cs2*U2+cs2*V2-alpha/5.+1./5.)/15.+cs2*(3.*FY*U2*V+3.*FX*U*V2+FX*U+FY*V)/R;
+			r8 = R*(U2*V2+cs2*U2+cs2*V2-alpha/5.+1./5.)+cs2*(FY*U2*V+FX*U*V2+cs2*FX*U+cs2*FY*V)/R;
 
 			/*r0 += 3.*nu_eff*(U*GY+V*GX);
 			r3 += 4.*nu_eff*(GX+GY)*(U+V);

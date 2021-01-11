@@ -13,8 +13,8 @@ using namespace std;
 ///----------------------------------------------------------------------------------------------------------------------------------
 const bool plot_vtk = true;
 const int n_phase = 2;
-const int nx = 500, ny = 2*nx, np = 9;
-const double NX = (double)nx-1, gravity = 0.05*0.05/NX, rho0_b = 1., At = 0.85, rho0_r = -rho0_b*(At+1)/(At-1), Reynolds = 300000., nu = sqrt(NX*gravity)*NX/Reynolds, T = sqrt(NX/gravity);
+const int nx = 200, ny = 4*nx, np = 9;
+const double NX = (double)nx-1, gravity = 0.05*0.05/NX, rho0_b = 1., At = 0.5, rho0_r = -rho0_b*(At+1)/(At-1), Reynolds = 300., nu = sqrt(NX*gravity)*NX/Reynolds, T = sqrt(NX/gravity);
 const double cs2 = 1./3., beta = 0.7, alpha_b = 4./9., alpha_r = 1.-(1.-alpha_b)*rho0_b/rho0_r;
 vector<const int> cx = {0, 1, 0, -1, 0, 1, -1, -1, 1},
 									cy = {0, 0, 1, 0, -1, 1, 1, -1, -1},
@@ -22,7 +22,7 @@ vector<const int> cx = {0, 1, 0, -1, 0, 1, -1, -1, 1},
 vector<const double> wf = {4./9., 1./9., 1./9., 1./9., 1./9., 1./36., 1./36., 1./36., 1./36.};
 vector<const double> B = {-4/27., 2/27., 2/27., 2/27., 2/27., 5/108., 5/108., 5/108., 5/108.};
 vector<const double> alphaK = {alpha_b, alpha_r}, ni = {nu, nu};
-const int nsteps = (int)(3*T+1), n_out = (int)(T/100);
+const int nsteps = (int)(10*T+1), n_out = (int)(T/10);
 vector<double> f(nx*ny*np,0.), f_old(nx*ny*np,0.), rhoK(nx*ny*n_phase,0.), rhoK_old(nx*ny*n_phase,0.), rho(nx*ny,0.), u(nx*ny,0.), v(nx*ny,0.), rho_old(nx*ny,0.);
 vector<double> gradx_rhoK(nx*ny*n_phase,0.), grady_rhoK(nx*ny*n_phase,0.);
 vector<double> gradx_rho(nx*ny,0.), grady_rho(nx*ny,0.);
@@ -120,7 +120,7 @@ void initial_state()
 				bn = rand()%(max-min + 1) + min;
 				h += an*cos(2.*M_PI*n*X)+bn*sin(2.*M_PI*n*X);
 			}
-			h = 0.5*ny+nx*0.002*h;
+			h = 0.5*ny+nx*0.1*cos(2.*M_PI*X);
       if(y>h)
       {
 	      rhoK[id*n_phase+0] = 0.;
@@ -390,7 +390,7 @@ int algorithm_CMS()
       k7 = 0.5*cs2*FX*R1 + R*U*(9.*alpha-4.)/15.;
 			k8 = -R*(3.*(alpha-1.)+(U2+V2)*(9.*alpha-4.))/15.;
 
-			k0 += 3.*(U*GY+V*GX)*nu_eff;
+			/*k0 += 3.*(U*GY+V*GX)*nu_eff;
 			k1 += -3.*(GY*U2+V*GX*U)*nu_eff;
 			k2 += -3.*(GX*V2+U*GY*V)*nu_eff;
 			k3 += (GY*(3.*(U3+U*V2)+4.*(U+V))+GX*(3.*(U2*V+V3)+4.*(U+V)))*nu_eff;
@@ -398,7 +398,7 @@ int algorithm_CMS()
 			k5 += (GX*(3.*U*V2+V+U)+GY*(3.*V*U2+U+V))*nu_eff;
 			k6 += (-GX*(3.*U2*V2+2.*(U2+V2)+5.*UV)-GY*(3.*U3*V+2.*U2+4.*UV+V2))*nu_eff;
 			k7 += (-GY*(3.*U2*V2+2.*(U2+V2)+5.*UV)-GX*(3.*U*V3+2.*V2+4.*UV+U2))*nu_eff;
-			k8 += (GX*(3.*U2*V3+U3+6.*U2*V+7.*U*V2+4.*U*cs2+2.*V3+V)+GY*(3.*U3*V2+2.*U3+7.*U2*V+6.*U*V2+U+V3+4*V*cs2))*nu_eff;
+			k8 += (GX*(3.*U2*V3+U3+6.*U2*V+7.*U*V2+4.*U*cs2+2.*V3+V)+GY*(3.*U3*V2+2.*U3+7.*U2*V+6.*U*V2+U+V3+4*V*cs2))*nu_eff;*/
 
 	// 		k0 += 3.*nu_eff*(U*gradyR+V*gradxR);
 	// 		k1 += -3.*nu_eff*(gradyR*U2+V*gradxR*U);
