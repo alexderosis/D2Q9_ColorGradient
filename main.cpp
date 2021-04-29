@@ -13,8 +13,8 @@ using namespace std;
 ///----------------------------------------------------------------------------------------------------------------------------------
 const bool plot_vtk = true;
 const int n_phase = 2;
-const int nx = 200, ny = 4*nx, np = 9;
-const double NX = (double)nx-1, gravity = 0.05*0.05/NX, rho0_b = 1., At = 0.5, rho0_r = -rho0_b*(At+1)/(At-1), Reynolds = 300., nu = sqrt(NX*gravity)*NX/Reynolds, T = sqrt(NX/gravity);
+const int nx = 100, ny = 4*nx, np = 9;
+const double NX = (double)nx-1, gravity = 0.01*0.01/NX, rho0_b = 1., At = 0.99, rho0_r = -rho0_b*(At+1)/(At-1), Reynolds = 300., nu = sqrt(NX*gravity)*NX/Reynolds, T = sqrt(NX/gravity/At);
 const double cs2 = 1./3., beta = 0.7, alpha_b = 4./9., alpha_r = 1.-(1.-alpha_b)*rho0_b/rho0_r;
 vector<const int> cx = {0, 1, 0, -1, 0, 1, -1, -1, 1},
 									cy = {0, 0, 1, 0, -1, 1, 1, -1, -1},
@@ -22,7 +22,7 @@ vector<const int> cx = {0, 1, 0, -1, 0, 1, -1, -1, 1},
 vector<const double> wf = {4./9., 1./9., 1./9., 1./9., 1./9., 1./36., 1./36., 1./36., 1./36.};
 vector<const double> B = {-4/27., 2/27., 2/27., 2/27., 2/27., 5/108., 5/108., 5/108., 5/108.};
 vector<const double> alphaK = {alpha_b, alpha_r}, ni = {nu, nu};
-const int nsteps = (int)(10*T+1), n_out = (int)(T/10);
+const int nsteps = (int)(4*T+1), n_out = (int)(T/50);
 vector<double> f(nx*ny*np,0.), f_old(nx*ny*np,0.), rhoK(nx*ny*n_phase,0.), rhoK_old(nx*ny*n_phase,0.), rho(nx*ny,0.), u(nx*ny,0.), v(nx*ny,0.), rho_old(nx*ny,0.);
 vector<double> gradx_rhoK(nx*ny*n_phase,0.), grady_rhoK(nx*ny*n_phase,0.);
 vector<double> gradx_rho(nx*ny,0.), grady_rho(nx*ny,0.);
@@ -113,13 +113,13 @@ void initial_state()
 			U = u[id] = 0.;
       V = v[id] = 0.;
       X = (double)x / ((double)nx-1);
-			h = 0;
-			for(int n=30; n<40; n++)
-			{
-				an = rand()%(max-min + 1) + min;
-				bn = rand()%(max-min + 1) + min;
-				h += an*cos(2.*M_PI*n*X)+bn*sin(2.*M_PI*n*X);
-			}
+			// h = 0;
+			// for(int n=30; n<40; n++)
+			// {
+			// 	an = rand()%(max-min + 1) + min;
+			// 	bn = rand()%(max-min + 1) + min;
+			// 	h += an*cos(2.*M_PI*n*X)+bn*sin(2.*M_PI*n*X);
+			// }
 			h = 0.5*ny+nx*0.1*cos(2.*M_PI*X);
       if(y>h)
       {
@@ -166,7 +166,7 @@ void compute_gradient_rho(int x, int y)
 			grady_rho[id] = 0.;
 		}
 		if(y>0 && y<ny-1)
-	    /*for(int n=1; n<np; n++)
+	    for(int n=1; n<np; n++)
 		  {
 			  newx = x+cx[n];
 			  newy = y+cy[n];
@@ -183,8 +183,8 @@ void compute_gradient_rho(int x, int y)
 					gradx_rho[id] += 3.*wf[n]*cx[n]*rho[idn];
 					grady_rho[id] += 3.*wf[n]*cy[n]*rho[idn];
 				}
-			}*/
-			for(int n=1; n<np_extended; n++)
+			}
+			/*for(int n=1; n<np_extended; n++)
 			{
 				newx = (x+cx[n]+nx)%nx;
 				newy = (y+cy[n]+ny)%ny;
@@ -210,7 +210,7 @@ void compute_gradient_rho(int x, int y)
 					gradx_rho[id] += weight*cx[n]*rho[idn];
 					grady_rho[id] += weight*cy[n]*rho[idn];
 				}
-			}
+			}*/
 		if(y==0) // SOUTH wall
 		{
       id1 = ((x+1+nx)%nx)*ny+y;
