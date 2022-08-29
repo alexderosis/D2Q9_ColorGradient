@@ -14,7 +14,7 @@ using namespace std;
 const bool plot_vtk = true;
 const int n_phase = 2;
 const int nx = 500, ny = 2*nx, np = 9;
-const double NX = (double)nx-1, gravity = 0.02*0.02/NX, rho0_b = 1., At = 0.85, rho0_r = -rho0_b*(At+1)/(At-1), Reynolds = 3000000., nu = sqrt(NX*gravity)*NX/Reynolds, T = sqrt(NX/gravity);
+const double NX = (double)nx-1, gravity = 0.02*0.02/NX, rho0_b = 1., At = 0.1, rho0_r = -rho0_b*(At+1)/(At-1), Reynolds = 300., nu = sqrt(NX*gravity)*NX/Reynolds, T = sqrt(NX/gravity);
 const double cs2 = 1./3., beta = 0.7, alpha_b = 4./9., alpha_r = 1.-(1.-alpha_b)*rho0_b/rho0_r;
 vector<const int> cx = {0, 1, 0, -1, 0, 1, -1, -1, 1},
 									cy = {0, 0, 1, 0, -1, 1, 1, -1, -1},
