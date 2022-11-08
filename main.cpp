@@ -13,8 +13,8 @@ using namespace std;
 ///----------------------------------------------------------------------------------------------------------------------------------
 const bool plot_vtk = true;
 const int n_phase = 2;
-const int nx = 100, ny = 4*nx, np = 9;
-const double NX = (double)nx-1, gravity = 0.01*0.01/NX, rho0_b = 1., At = 0.99, rho0_r = -rho0_b*(At+1)/(At-1), Reynolds = 300., nu = sqrt(NX*gravity)*NX/Reynolds, T = sqrt(NX/gravity/At);
+const int nx = 1000, ny = 2*nx, np = 9;
+const double NX = (double)nx-1, gravity = 0.1*0.1/NX, rho0_b = 1., At = 0.1, rho0_r = -rho0_b*(At+1)/(At-1), Reynolds = 300., nu = sqrt(NX*gravity)*NX/Reynolds, T = sqrt(NX/gravity/At);
 const double cs2 = 1./3., beta = 0.7, alpha_b = 4./9., alpha_r = 1.-(1.-alpha_b)*rho0_b/rho0_r;
 vector<const int> cx = {0, 1, 0, -1, 0, 1, -1, -1, 1},
 									cy = {0, 0, 1, 0, -1, 1, 1, -1, -1},
@@ -113,14 +113,14 @@ void initial_state()
 			U = u[id] = 0.;
       V = v[id] = 0.;
       X = (double)x / ((double)nx-1);
-			// h = 0;
-			// for(int n=30; n<40; n++)
-			// {
-			// 	an = rand()%(max-min + 1) + min;
-			// 	bn = rand()%(max-min + 1) + min;
-			// 	h += an*cos(2.*M_PI*n*X)+bn*sin(2.*M_PI*n*X);
-			// }
-			h = 0.5*ny+nx*0.1*cos(2.*M_PI*X);
+			h = 0.5*ny;
+			for(int n=30; n<40; n++)
+			{
+			 	an = rand()%(max-min + 1) + min;
+			 	bn = rand()%(max-min + 1) + min;
+			 	h += an*cos(2.*M_PI*n*X)+bn*sin(2.*M_PI*n*X);
+			}
+			//h = 0.5*ny+nx*0.1*cos(2.*M_PI*X);
       if(y>h)
       {
 	      rhoK[id*n_phase+0] = 0.;
